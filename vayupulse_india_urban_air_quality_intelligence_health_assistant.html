@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VayuPulse India — Urban Air Quality Intelligence & Health Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // =========================================================================
+    // INLINE SVG ICONS (ZERO EXTERNAL BUNDLER DEPENDENCIES)
+    // =========================================================================
+    const Icon = ({ path, className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        {path}
+      </svg>
+    );
+
+    const Icons = {
+      Activity: (p) => <Icon {...p} path={<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />} />,
+      Clock: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />,
+      MapPin: (p) => <Icon {...p} path={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>} />,
+      Layers: (p) => <Icon {...p} path={<><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></>} />,
+      Search: (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>} />,
+      Sliders: (p) => <Icon {...p} path={<><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></>} />,
+      Zap: (p) => <Icon {...p} path={<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />} />,
+      Flame: (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />} />,
+      AlertTriangle: (p) => <Icon {...p} path={<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>} />,
+      Sun: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></>} />,
+      Moon: (p) => <Icon {...p} path={<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />} />,
+      Thermometer: (p) => <Icon {...p} path={<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />} />,
+      Droplets: (p) => <Icon {...p} path={<><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z" /><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97" /></>} />,
+      Wind: (p) => <Icon {...p} path={<><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" /></>} />,
+      Shield: (p) => <Icon {...p} path={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />} />,
+      Gauge: (p) => <Icon {...p} path={<><path d="m12 14 4-4" /><path d="M3.34 19a10 10 0 1 1 17.32 0" /></>} />,
+      Award: (p) => <Icon {...p} path={<><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></>} />,
+      Train: (p) => <Icon {...p} path={<><rect x="4" y="3" width="16" height="16" rx="2" /><path d="M4 11h16" /><path d="M12 3v8" /><path d="m8 19-2 3" /><path d="m18 22-2-3" /><path d="M8 15h0" /><path d="M16 15h0" /></>} />,
+      Bike: (p) => <Icon {...p} path={<><circle cx="5.5" cy="17.5" r="3.5" /><circle cx="18.5" cy="17.5" r="3.5" /><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2" /></>} />,
+      Footprints: (p) => <Icon {...p} path={<><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" /><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" /></>} />,
+      ArrowUpDown: (p) => <Icon {...p} path={<><path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /></>} />,
+      ChevronRight: (p) => <Icon {...p} path={<polyline points="9 18 15 12 9 6" />} />,
+      Sparkles: (p) => <Icon {...p} path={<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />} />,
+      RefreshCw: (p) => <Icon {...p} path={<><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></>} />,
+      Send: (p) => <Icon {...p} path={<><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>} />,
+      Key: (p) => <Icon {...p} path={<><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" /></>} />
+    };
+
+    // =========================================================================
+    // 1. CPCB NAQI STANDARDS, GRAP STAGES & METEOROLOGICAL DATASETS
+    // =========================================================================
+    const CPCB_BANDS = [
+      { min: 0, max: 50, label: 'Good', color: '#00B050', bgSoft: 'bg-emerald-50 border-emerald-200 text-emerald-900', badge: 'bg-emerald-600 text-white border-emerald-700', advisory: 'Minimal impact. Clean ambient air; ideal for outdoor endurance exercise and open-window ventilation.' },
+      { min: 51, max: 100, label: 'Satisfactory', color: '#84CC16', bgSoft: 'bg-lime-50 border-lime-200 text-lime-900', badge: 'bg-lime-600 text-white border-lime-700', advisory: 'Minor breathing discomfort possible for hypersensitive individuals during prolonged exertion.' },
+      { min: 101, max: 200, label: 'Moderate', color: '#EAB308', bgSoft: 'bg-amber-50 border-amber-200 text-amber-950', badge: 'bg-amber-500 text-slate-950 border-amber-600', advisory: 'Breathing discomfort to people with asthma, lung/heart disease, children, and older adults.' },
+      { min: 201, max: 300, label: 'Poor', color: '#F97316', bgSoft: 'bg-orange-50 border-orange-200 text-orange-950', badge: 'bg-orange-600 text-white border-orange-700', advisory: 'Breathing discomfort on prolonged exposure; limit outdoor cardio and wear N95 masks in traffic.' },
+      { min: 301, max: 400, label: 'Very Poor', color: '#EF4444', bgSoft: 'bg-rose-50 border-rose-200 text-rose-950', badge: 'bg-red-600 text-white border-red-700', advisory: 'Respiratory illness on prolonged exposure. Pronounced impact on heart/lung patients; run HEPA purifiers.' },
+      { min: 401, max: 500, label: 'Severe', color: '#991B1B', bgSoft: 'bg-red-100 border-red-300 text-red-950', badge: 'bg-red-900 text-white border-red-950', advisory: 'Affects healthy people and seriously impacts those with existing diseases. Avoid all outdoor physical exertion.' }
+    ];
+
+    const POLLUTANT_SPECS = {
+      pm25: { key: 'pm25', name: 'PM2.5', fullName: 'Fine Particulate Matter', unit: 'µg/m³', limit: 60, maxScale: 320, sources: 'Tailpipe diesel/petrol exhaust, crop residue burning, secondary nitrates/sulfates, and solid-fuel combustion.', healthImpact: 'Penetrates deep into lung alveoli and enters the bloodstream, triggering systemic inflammation and cardiovascular stress.' },
+      pm10: { key: 'pm10', name: 'PM10', fullName: 'Coarse Inhalable Dust', unit: 'µg/m³', limit: 100, maxScale: 520, sources: 'Unpaved road dust resuspension, C&D (construction & demolition) sites, and dry crustal windblown dust.', healthImpact: 'Irritates upper airways, eyes, and sinuses; aggravates allergic rhinitis, bronchitis, and asthma.' },
+      no2:  { key: 'no2', name: 'NO₂', fullName: 'Nitrogen Dioxide', unit: 'µg/m³', limit: 80, maxScale: 240, sources: 'High-temperature combustion in vehicular engines, thermal power plants, and diesel backup generators.', healthImpact: 'Inflames bronchial lining, lowers immunity to respiratory infections, and increases asthma attack frequency.' },
+      so2:  { key: 'so2', name: 'SO₂', fullName: 'Sulphur Dioxide', unit: 'µg/m³', limit: 80, maxScale: 200, sources: 'Coal-fired power generation, industrial boilers, brick kilns, and high-sulfur fuel burning.', healthImpact: 'Causes rapid bronchoconstriction and shortness of breath, particularly in asthmatics during physical activity.' },
+      co:   { key: 'co', name: 'CO', fullName: 'Carbon Monoxide', unit: 'mg/m³', limit: 2.0, maxScale: 8.0, sources: 'Incomplete combustion in idling traffic congestion, cold engine starts, and biomass heating.', healthImpact: 'Binds to hemoglobin to reduce oxygen delivery to vital organs, causing fatigue, headaches, and angina.' },
+      o3:   { key: 'o3', name: 'O₃', fullName: 'Ground-Level Ozone', unit: 'µg/m³', limit: 100, maxScale: 240, sources: 'Secondary photochemical reaction between NOx and VOCs under strong midday solar radiation.', healthImpact: 'Oxidizes lung tissue, triggers chest tightness, coughing, and reduces lung function during afternoon peaks.' }
+    };
+
+    const CITIES_DB = {
+      greater_noida: {
+        id: 'greater_noida', name: 'Greater Noida', region: 'Delhi-NCR • UP', isNCR: true,
+        temp: 20, humidity: 61, windSpeed: 6, windDir: 'NW', mixingHeight: 420,
+        stations: [
+          {
+            id: 'gn_kp3', name: 'Knowledge Park III (UPPCB)', pin: '201308', aqi: 342,
+            pollutants: { pm25: 174, pm10: 318, no2: 64, so2: 19, co: 2.3, o3: 48 },
+            sources: [
+              { label: 'Construction & Road Dust', pct: 34, color: '#F59E0B' },
+              { label: 'Vehicular & Expressway Traffic', pct: 28, color: '#3B82F6' },
+              { label: 'Regional Biomass / Stubble', pct: 22, color: '#EF4444' },
+              { label: 'Industrial & Secondary Aerosols', pct: 16, color: '#8B5CF6' }
+            ]
+          },
+          {
+            id: 'gn_kp5', name: 'Knowledge Park V (CAAQMS)', pin: '201306', aqi: 318,
+            pollutants: { pm25: 158, pm10: 294, no2: 58, so2: 17, co: 2.0, o3: 51 },
+            sources: [
+              { label: 'Construction & Road Dust', pct: 36, color: '#F59E0B' },
+              { label: 'Vehicular & Expressway Traffic', pct: 25, color: '#3B82F6' },
+              { label: 'Regional Biomass / Stubble', pct: 23, color: '#EF4444' },
+              { label: 'Industrial & Secondary Aerosols', pct: 16, color: '#8B5CF6' }
+            ]
+          }
+        ]
+      },
+      delhi: {
+        id: 'delhi', name: 'New Delhi', region: 'Delhi-NCR • NCT', isNCR: true,
+        temp: 19, humidity: 64, windSpeed: 5, windDir: 'NW', mixingHeight: 380,
+        stations: [
+          {
+            id: 'dl_anand', name: 'Anand Vihar ISBT (DPCC)', pin: '110092', aqi: 388,
+            pollutants: { pm25: 208, pm10: 372, no2: 88, so2: 24, co: 3.1, o3: 44 },
+            sources: [
+              { label: 'Vehicular & Diesel Transit', pct: 38, color: '#3B82F6' },
+              { label: 'Regional Biomass / Stubble', pct: 26, color: '#EF4444' },
+              { label: 'Construction & Road Dust', pct: 22, color: '#F59E0B' },
+              { label: 'Industrial & Secondary Aerosols', pct: 14, color: '#8B5CF6' }
+            ]
+          },
+          {
+            id: 'dl_rkpuram', name: 'R.K. Puram (DPCC)', pin: '110022', aqi: 336,
+            pollutants: { pm25: 168, pm10: 302, no2: 71, so2: 18, co: 2.4, o3: 52 },
+            sources: [
+              { label: 'Vehicular & Diesel Transit', pct: 35, color: '#3B82F6' },
+              { label: 'Regional Biomass / Stubble', pct: 28, color: '#EF4444' },
+              { label: 'Construction & Road Dust', pct: 21, color: '#F59E0B' },
+              { label: 'Industrial & Secondary Aerosols', pct: 16, color: '#8B5CF6' }
+            ]
+          },
+          {
+            id: 'dl_dwarka', name: 'Dwarka Sector 8 (IMD)', pin: '110077', aqi: 312,
+            pollutants: { pm25: 152, pm10: 286, no2: 61, so2: 16, co: 2.1, o3: 54 },
+            sources: [
+              { label: 'Construction & Road Dust', pct: 33, color: '#F59E0B' },
+              { label: 'Regional Biomass / Stubble', pct: 27, color: '#EF4444' },
+              { label: 'Vehicular & Diesel Transit', pct: 26, color: '#3B82F6' },
+              { label: 'Industrial & Secondary Aerosols', pct: 14, color: '#8B5CF6' }
+            ]
+          }
+        ]
+      },
+      mumbai: {
+        id: 'mumbai', name: 'Mumbai', region: 'Maharashtra', isNCR: false,
+        temp: 29, humidity: 66, windSpeed: 14, windDir: 'W', mixingHeight: 920,
+        stations: [
+          {
+            id: 'mum_bkc', name: 'Bandra Kurla Complex (MPCB)', pin: '400051', aqi: 156,
+            pollutants: { pm25: 78, pm10: 148, no2: 52, so2: 18, co: 1.4, o3: 61 },
+            sources: [
+              { label: 'Construction & Metro Works', pct: 39, color: '#F59E0B' },
+              { label: 'Vehicular Exhaust', pct: 34, color: '#3B82F6' },
+              { label: 'Marine & Secondary Aerosols', pct: 15, color: '#8B5CF6' },
+              { label: 'Industrial & Port Activity', pct: 12, color: '#EF4444' }
+            ]
+          },
+          {
+            id: 'mum_worli', name: 'Worli Seaface (CPCB)', pin: '400018', aqi: 118,
+            pollutants: { pm25: 56, pm10: 114, no2: 38, so2: 14, co: 1.1, o3: 55 },
+            sources: [
+              { label: 'Vehicular Exhaust', pct: 38, color: '#3B82F6' },
+              { label: 'Construction & Coastal Road', pct: 35, color: '#F59E0B' },
+              { label: 'Marine & Secondary Aerosols', pct: 17, color: '#8B5CF6' },
+              { label: 'Industrial & Port Activity', pct: 10, color: '#EF4444' }
+            ]
+          }
+        ]
+      },
+      bengaluru: {
+        id: 'bengaluru', name: 'Bengaluru', region: 'Karnataka', isNCR: false,
+        temp: 23, humidity: 57, windSpeed: 13, windDir: 'E', mixingHeight: 1150,
+        stations: [
+          {
+            id: 'blr_cubbon', name: 'Cubbon Park / City Rly Stn (KSPCB)', pin: '560001', aqi: 74,
+            pollutants: { pm25: 33, pm10: 74, no2: 31, so2: 9, co: 0.8, o3: 43 },
+            sources: [
+              { label: 'Vehicular Traffic', pct: 46, color: '#3B82F6' },
+              { label: 'Road & Construction Dust', pct: 31, color: '#F59E0B' },
+              { label: 'Secondary Aerosols', pct: 13, color: '#8B5CF6' },
+              { label: 'DG Sets & Small Industry', pct: 10, color: '#EF4444' }
+            ]
+          },
+          {
+            id: 'blr_whitefield', name: 'Whitefield Industrial (KSPCB)', pin: '560066', aqi: 96,
+            pollutants: { pm25: 44, pm10: 96, no2: 39, so2: 12, co: 1.0, o3: 47 },
+            sources: [
+              { label: 'Vehicular Traffic', pct: 42, color: '#3B82F6' },
+              { label: 'Road & Construction Dust', pct: 35, color: '#F59E0B' },
+              { label: 'DG Sets & Small Industry', pct: 14, color: '#EF4444' },
+              { label: 'Secondary Aerosols', pct: 9, color: '#8B5CF6' }
+            ]
+          }
+        ]
+      },
+      pune: {
+        id: 'pune', name: 'Pune', region: 'Maharashtra', isNCR: false,
+        temp: 24, humidity: 48, windSpeed: 11, windDir: 'W', mixingHeight: 980,
+        stations: [
+          {
+            id: 'pun_shivaji', name: 'Shivajinagar (SAFAR)', pin: '411005', aqi: 128,
+            pollutants: { pm25: 64, pm10: 122, no2: 41, so2: 12, co: 1.1, o3: 54 },
+            sources: [
+              { label: 'Two-Wheeler & Car Exhaust', pct: 44, color: '#3B82F6' },
+              { label: 'Metro & Road Dust', pct: 33, color: '#F59E0B' },
+              { label: 'Secondary Aerosols', pct: 13, color: '#8B5CF6' },
+              { label: 'Biomass & Brick Kilns', pct: 10, color: '#EF4444' }
+            ]
+          },
+          {
+            id: 'pun_pashan', name: 'Pashan IITM Campus (SAFAR)', pin: '411008', aqi: 94,
+            pollutants: { pm25: 45, pm10: 92, no2: 29, so2: 9, co: 0.8, o3: 49 },
+            sources: [
+              { label: 'Two-Wheeler & Car Exhaust', pct: 41, color: '#3B82F6' },
+              { label: 'Metro & Road Dust', pct: 32, color: '#F59E0B' },
+              { label: 'Secondary Aerosols', pct: 16, color: '#8B5CF6' },
+              { label: 'Biomass & Brick Kilns', pct: 11, color: '#EF4444' }
+            ]
+          }
+        ]
+      },
+      hyderabad: {
+        id: 'hyderabad', name: 'Hyderabad', region: 'Telangana', isNCR: false,
+        temp: 25, humidity: 51, windSpeed: 10, windDir: 'E', mixingHeight: 1020,
+        stations: [
+          {
+            id: 'hyd_hitec', name: 'HITEC City / Madhapur (TSPCB)', pin: '500081', aqi: 114,
+            pollutants: { pm25: 55, pm10: 114, no2: 36, so2: 11, co: 1.0, o3: 49 },
+            sources: [
+              { label: 'Vehicular Emissions', pct: 40, color: '#3B82F6' },
+              { label: 'Construction & Road Dust', pct: 34, color: '#F59E0B' },
+              { label: 'Industrial & Pharma Belt', pct: 15, color: '#EF4444' },
+              { label: 'Secondary Aerosols', pct: 11, color: '#8B5CF6' }
+            ]
+          }
+        ]
+      },
+      kolkata: {
+        id: 'kolkata', name: 'Kolkata', region: 'West Bengal', isNCR: false,
+        temp: 24, humidity: 65, windSpeed: 7, windDir: 'N', mixingHeight: 540,
+        stations: [
+          {
+            id: 'kol_victoria', name: 'Victoria Memorial & Park St (WBPCB)', pin: '700016', aqi: 224,
+            pollutants: { pm25: 99, pm10: 188, no2: 56, so2: 20, co: 1.8, o3: 52 },
+            sources: [
+              { label: 'Vehicular & Port Transit', pct: 36, color: '#3B82F6' },
+              { label: 'Biomass & Solid Fuel', pct: 26, color: '#EF4444' },
+              { label: 'Road & Construction Dust', pct: 22, color: '#F59E0B' },
+              { label: 'Industrial & Secondary Aerosols', pct: 16, color: '#8B5CF6' }
+            ]
+          }
+        ]
+      },
+      chennai: {
+        id: 'chennai', name: 'Chennai', region: 'Tamil Nadu', isNCR: false,
+        temp: 28, humidity: 74, windSpeed: 16, windDir: 'NE', mixingHeight: 1120,
+        stations: [
+          {
+            id: 'chn_guindy', name: 'Alandur / Guindy (TNPCB)', pin: '600032', aqi: 86,
+            pollutants: { pm25: 40, pm10: 82, no2: 27, so2: 14, co: 0.9, o3: 39 },
+            sources: [
+              { label: 'Vehicular Exhaust', pct: 43, color: '#3B82F6' },
+              { label: 'Road & Metro Dust', pct: 28, color: '#F59E0B' },
+              { label: 'Industrial & Thermal Plants', pct: 17, color: '#EF4444' },
+              { label: 'Sea Salt & Secondary Aerosols', pct: 12, color: '#8B5CF6' }
+            ]
+          }
+        ]
+      }
+    };
+
+    const SCENARIO_PRESETS = [
+      { id: 'stubble_spike', label: 'Diwali / Stubble Spike', aqi: 448 },
+      { id: 'traffic_peak', label: 'Morning Traffic Peak', aqi: 268 },
+      { id: 'monsoon_breeze', label: 'Post-Monsoon Breeze', aqi: 46 }
+    ];
+
+    // =========================================================================
+    // 2. UTILITY FUNCTIONS
+    // =========================================================================
+    function getCpcbBand(aqi) {
+      const val = Math.max(0, Math.min(500, Math.round(aqi)));
+      return CPCB_BANDS.find(b => val >= b.min && val <= b.max) || CPCB_BANDS[CPCB_BANDS.length - 1];
+    }
+
+    function calcCigarettesPerDay(pm25) {
+      return (pm25 / 22).toFixed(1);
+    }
+
+    function getGrapStage(aqi, isNCR) {
+      if (!isNCR) return null;
+      if (aqi > 450) return { stage: 'GRAP Stage-IV (Severe+)', color: 'bg-red-950 text-red-100 border-red-800', summary: 'Ban on non-essential trucks, construction halt, and hybrid/online school directives active in NCR.' };
+      if (aqi > 400) return { stage: 'GRAP Stage-III (Severe)', color: 'bg-red-900 text-white border-red-700', summary: 'Strict ban on non-essential C&D activities, BS-III petrol / BS-IV diesel LMV restrictions.' };
+      if (aqi > 300) return { stage: 'GRAP Stage-II (Very Poor)', color: 'bg-rose-700 text-white border-rose-800', summary: 'Diesel generator restrictions, mechanized road sweeping, and enhanced parking fees to curb private cars.' };
+      if (aqi > 200) return { stage: 'GRAP Stage-I (Poor)', color: 'bg-orange-600 text-white border-orange-700', summary: 'Dust mitigation at construction sites, anti-smog guns, and strict PUC enforcement active.' };
+      return { stage: 'GRAP Pre-Stage (Normal)', color: 'bg-emerald-700 text-white border-emerald-800', summary: 'Standard CPCB dust & vehicular emission norms active.' };
+    }
+
+    function buildDiurnalCurve(baseAqi) {
+      const hourlyFactors = [
+        1.12, 1.15, 1.17, 1.18, 1.16, 1.14,
+        1.18, 1.24, 1.22, 1.12, 0.98, 0.84,
+        0.74, 0.68, 0.66, 0.70, 0.78, 0.88,
+        0.98, 1.08, 1.15, 1.19, 1.17, 1.14
+      ];
+      return hourlyFactors.map((mult, hour) => {
+        const val = Math.max(18, Math.min(500, Math.round(baseAqi * mult)));
+        const label = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
+        return { hour, label, aqi: val, isAfternoonWindow: hour >= 12 && hour <= 16 };
+      });
+    }
+
+    // =========================================================================
+    // 3. SUB-COMPONENTS
+    // =========================================================================
+    function RadialAqiGauge({ aqi, band }) {
+      const radius = 88;
+      const circumference = Math.PI * radius;
+      const clamped = Math.max(0, Math.min(500, aqi));
+      const strokeDashoffset = circumference * (1 - clamped / 500);
+
+      return (
+        <div className="relative flex flex-col items-center justify-center my-2">
+          <div className="relative w-56 h-32 flex items-end justify-center">
+            <svg className="w-56 h-32 overflow-visible" viewBox="0 0 220 124">
+              <path d="M 22 112 A 88 88 0 0 1 198 112" fill="none" stroke="#E2E8F0" strokeWidth="16" strokeLinecap="round" />
+              <path
+                d="M 22 112 A 88 88 0 0 1 198 112"
+                fill="none"
+                stroke={band.color}
+                strokeWidth="16"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                style={{ transition: 'stroke-dashoffset 0.85s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.4s ease' }}
+              />
+            </svg>
+            <div className="absolute bottom-0 flex flex-col items-center text-center">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">CPCB NAQI</span>
+              <span className="text-4xl sm:text-5xl font-extrabold font-mono tracking-tight text-slate-900 leading-none my-0.5">{aqi}</span>
+              <span className="text-[11px] font-medium text-slate-500">0 – 500 Scale</span>
+            </div>
+          </div>
+
+          <div className="w-full max-w-[240px] mt-3">
+            <div className="grid grid-cols-6 gap-1 h-1.5 rounded-full overflow-hidden">
+              {CPCB_BANDS.map(b => (
+                <div key={b.label} style={{ backgroundColor: b.color }} title={`${b.label} (${b.min}–${b.max})`} />
+              ))}
+            </div>
+            <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1">
+              <span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DiurnalForecastChart({ hourlyData, currentHour }) {
+      const [hoveredHour, setHoveredHour] = useState(null);
+      const maxVal = Math.max(200, ...hourlyData.map(d => d.aqi));
+      const activePoint = hoveredHour !== null ? hourlyData[hoveredHour] : hourlyData[currentHour] || hourlyData[13];
+      const activeBand = getCpcbBand(activePoint.aqi);
+
+      return (
+        <div className="flex flex-col h-full justify-between">
+          <div className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 mb-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {hoveredHour !== null ? 'Selected Forecast Hour' : 'Current Boundary Layer'}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm font-bold font-mono text-slate-900">{activePoint.label}</span>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: activeBand.color }}>
+                  AQI {activePoint.aqi} • {activeBand.label}
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              {activePoint.isAfternoonWindow ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+                  <Icons.Sun className="w-3.5 h-3.5 text-amber-500" /> Best Ventilation Window
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                  <Icons.Moon className="w-3.5 h-3.5 text-indigo-500" /> Inversion Trapping
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="relative pt-4 pb-1">
+            <div
+              className="absolute top-0 bottom-5 bg-emerald-500/10 border-x border-dashed border-emerald-400/60 rounded-md pointer-events-none flex flex-col items-center justify-start pt-1"
+              style={{ left: '50%', width: '20.8%' }}
+            >
+              <span className="text-[9px] font-bold uppercase tracking-tighter text-emerald-700 bg-white/90 px-1 rounded">
+                Dispersion
+              </span>
+            </div>
+
+            <div className="grid gap-1 items-end h-36 relative z-10" style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}>
+              {hourlyData.map((d) => {
+                const band = getCpcbBand(d.aqi);
+                const heightPct = Math.max(12, Math.round((d.aqi / maxVal) * 100));
+                const isSelected = activePoint.hour === d.hour;
+                const isNow = d.hour === currentHour;
+
+                return (
+                  <button
+                    key={d.hour}
+                    type="button"
+                    onMouseEnter={() => setHoveredHour(d.hour)}
+                    onMouseLeave={() => setHoveredHour(null)}
+                    onClick={() => setHoveredHour(d.hour)}
+                    className="group relative flex flex-col items-center justify-end h-full focus:outline-none"
+                    aria-label={`${d.label}: AQI ${d.aqi}`}
+                  >
+                    {isNow && <span className="absolute -top-3.5 text-[9px] font-extrabold text-teal-700">NOW</span>}
+                    <div
+                      className={`w-full rounded-t-sm transition-all duration-200 ${isSelected ? 'ring-2 ring-slate-900 scale-x-110' : 'opacity-85 group-hover:opacity-100'}`}
+                      style={{ height: `${heightPct}%`, backgroundColor: band.color }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1.5 px-0.5">
+              <span>12 AM</span><span>6 AM</span><span className="text-emerald-700 font-semibold">12 PM</span><span>6 PM</span><span>11 PM</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // 4. MAIN APPLICATION
+    // =========================================================================
+    function App() {
+      const [cityId, setCityId] = useState('greater_noida');
+      const [stationIndex, setStationIndex] = useState(0);
+      const [customStationOverride, setCustomStationOverride] = useState(null);
+      const [pinQuery, setPinQuery] = useState('');
+      const [searchNotice, setSearchNotice] = useState('');
+
+      const [mode, setMode] = useState('live');
+      const [simAqi, setSimAqi] = useState(342);
+
+      const [selectedPollutantKey, setSelectedPollutantKey] = useState('pm25');
+      const [activeTab, setActiveTab] = useState('planner');
+      const [persona, setPersona] = useState('general');
+      const [selectedSourceIdx, setSelectedSourceIdx] = useState(0);
+
+      const [commuteMinutes, setCommuteMinutes] = useState(60);
+      const [transportMode, setTransportMode] = useState('open');
+      const [maskType, setMaskType] = useState('none');
+      const [sortAsc, setSortAsc] = useState(true);
+
+      const [nowString, setNowString] = useState('');
+      const [currentHour, setCurrentHour] = useState(new Date().getHours());
+
+      // Optional User-Provided Gemini API Key for GitHub Pages / Local Hosting
+      const [userApiKey, setUserApiKey] = useState('');
+      const [showKeyInput, setShowKeyInput] = useState(false);
+
+      const [chatHistory, setChatHistory] = useState([
+        {
+          role: 'model',
+          text: 'Namaste! I am **VayuMitra**, your CPCB-grounded Air Quality Copilot. Ask me about outdoor running windows, N95/HEPA settings, GRAP rules, or inter-city comparisons.'
+        }
+      ]);
+      const [chatInput, setChatInput] = useState('');
+      const [isChatLoading, setIsChatLoading] = useState(false);
+      const chatScrollRef = useRef(null);
+
+      useEffect(() => {
+        const updateClock = () => {
+          const now = new Date();
+          setCurrentHour(now.getHours());
+          setNowString(
+            now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
+          );
+        };
+        updateClock();
+        const timer = setInterval(updateClock, 30000);
+        return () => clearInterval(timer);
+      }, []);
+
+      useEffect(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      }, [chatHistory, isChatLoading]);
+
+      const activeTelemetry = useMemo(() => {
+        const city = CITIES_DB[cityId];
+        const baseStation = city.stations[stationIndex] || city.stations[0];
+
+        if (mode === 'simulated') {
+          const ratio = simAqi / baseStation.aqi;
+          const scaledPollutants = {};
+          Object.entries(baseStation.pollutants).forEach(([k, v]) => {
+            const scaled = v * ratio;
+            scaledPollutants[k] = k === 'co' ? Number(scaled.toFixed(1)) : Math.max(1, Math.round(scaled));
+          });
+          return {
+            city,
+            stationName: `${baseStation.name} (Simulated)`,
+            pin: customStationOverride?.pin || baseStation.pin,
+            aqi: simAqi,
+            pollutants: scaledPollutants,
+            sources: baseStation.sources,
+            mixingHeight: Math.max(220, Math.round(city.mixingHeight * (baseStation.aqi / Math.max(40, simAqi))))
+          };
+        }
+
+        const offset = customStationOverride?.aqiOffset || 0;
+        const effectiveAqi = Math.max(20, Math.min(495, baseStation.aqi + offset));
+        const ratio = effectiveAqi / baseStation.aqi;
+        const adjustedPollutants = {};
+        Object.entries(baseStation.pollutants).forEach(([k, v]) => {
+          const adj = v * ratio;
+          adjustedPollutants[k] = k === 'co' ? Number(adj.toFixed(1)) : Math.max(1, Math.round(adj));
+        });
+
+        return {
+          city,
+          stationName: customStationOverride?.stationName || baseStation.name,
+          pin: customStationOverride?.pin || baseStation.pin,
+          aqi: effectiveAqi,
+          pollutants: adjustedPollutants,
+          sources: baseStation.sources,
+          mixingHeight: city.mixingHeight
+        };
+      }, [cityId, stationIndex, customStationOverride, mode, simAqi]);
+
+      const activeBand = useMemo(() => getCpcbBand(activeTelemetry.aqi), [activeTelemetry.aqi]);
+
+      const dominantPollutant = useMemo(() => {
+        let maxRatio = -1;
+        let domKey = 'pm25';
+        Object.entries(activeTelemetry.pollutants).forEach(([k, val]) => {
+          const ratio = val / POLLUTANT_SPECS[k].limit;
+          if (ratio > maxRatio) {
+            maxRatio = ratio;
+            domKey = k;
+          }
+        });
+        return {
+          ...POLLUTANT_SPECS[domKey],
+          value: activeTelemetry.pollutants[domKey],
+          multiple: (activeTelemetry.pollutants[domKey] / POLLUTANT_SPECS[domKey].limit).toFixed(1)
+        };
+      }, [activeTelemetry.pollutants]);
+
+      const grapAlert = useMemo(() => getGrapStage(activeTelemetry.aqi, activeTelemetry.city.isNCR), [activeTelemetry.aqi, activeTelemetry.city.isNCR]);
+      const hourlyForecast = useMemo(() => buildDiurnalCurve(activeTelemetry.aqi), [activeTelemetry.aqi]);
+      const cigarettesEq = useMemo(() => calcCigarettesPerDay(activeTelemetry.pollutants.pm25), [activeTelemetry.pollutants.pm25]);
+
+      const doseMetrics = useMemo(() => {
+        const pm25 = activeTelemetry.pollutants.pm25;
+        const modeFactors = {
+          ac: { ventilation: 0.012, infiltration: 0.45 },
+          open: { ventilation: 0.016, infiltration: 1.15 },
+          active: { ventilation: 0.045, infiltration: 1.0 }
+        };
+        const maskFiltration = { none: 1.0, surgical: 0.72, n95: 0.12 };
+        const mf = modeFactors[transportMode];
+        const hours = commuteMinutes / 60;
+        const rawInhaledUg = pm25 * mf.infiltration * mf.ventilation * 60 * hours * maskFiltration[maskType];
+        const n95InhaledUg = pm25 * mf.infiltration * mf.ventilation * 60 * hours * 0.12;
+        const safeDailyBudgetUg = 25 * 0.014 * 60 * 24;
+
+        return {
+          inhaledUg: Math.round(rawInhaledUg),
+          n95InhaledUg: Math.round(n95InhaledUg),
+          savedWithN95: Math.max(0, Math.round(rawInhaledUg - n95InhaledUg)),
+          budgetPct: Math.min(250, Math.round((rawInhaledUg / safeDailyBudgetUg) * 100))
+        };
+      }, [activeTelemetry.pollutants.pm25, commuteMinutes, transportMode, maskType]);
+
+      const allStationsList = useMemo(() => {
+        const list = [];
+        Object.values(CITIES_DB).forEach(c => {
+          c.stations.forEach(s => {
+            list.push({
+              cityId: c.id, cityName: c.name, region: c.region,
+              stationName: s.name, pin: s.pin, aqi: s.aqi,
+              pm25: s.pollutants.pm25, band: getCpcbBand(s.aqi)
+            });
+          });
+        });
+        return list.sort((a, b) => (sortAsc ? a.aqi - b.aqi : b.aqi - a.aqi));
+      }, [sortAsc]);
+
+      const handleCitySelect = (newCityId) => {
+        setCityId(newCityId);
+        setStationIndex(0);
+        setCustomStationOverride(null);
+        setSelectedSourceIdx(0);
+        setSearchNotice('');
+        if (mode === 'simulated') setSimAqi(CITIES_DB[newCityId].stations[0].aqi);
+      };
+
+      const handlePinSearch = (e) => {
+        e.preventDefault();
+        const q = pinQuery.trim().toLowerCase();
+        if (!q) return;
+
+        for (const city of Object.values(CITIES_DB)) {
+          for (let idx = 0; idx < city.stations.length; idx++) {
+            const st = city.stations[idx];
+            if (st.pin === q || st.name.toLowerCase().includes(q) || city.name.toLowerCase() === q) {
+              setCityId(city.id);
+              setStationIndex(idx);
+              setCustomStationOverride(null);
+              setMode('live');
+              setSearchNotice(`Locked onto CPCB station: ${st.name} (PIN ${st.pin})`);
+              return;
+            }
+          }
+        }
+
+        if (/^\d{6}$/.test(q)) {
+          let targetCityId = 'greater_noida';
+          if (q.startsWith('201')) targetCityId = 'greater_noida';
+          else if (q.startsWith('110')) targetCityId = 'delhi';
+          else if (q.startsWith('400')) targetCityId = 'mumbai';
+          else if (q.startsWith('560')) targetCityId = 'bengaluru';
+          else if (q.startsWith('411')) targetCityId = 'pune';
+          else if (q.startsWith('500')) targetCityId = 'hyderabad';
+          else if (q.startsWith('700')) targetCityId = 'kolkata';
+          else if (q.startsWith('600')) targetCityId = 'chennai';
+
+          const offset = (parseInt(q.slice(-2), 10) % 28) - 14;
+          setCityId(targetCityId);
+          setStationIndex(0);
+          setCustomStationOverride({
+            stationName: `Nearest CAAQMS Node — ${CITIES_DB[targetCityId].name}`,
+            pin: q,
+            aqiOffset: offset
+          });
+          setMode('live');
+          setSearchNotice(`Interpolated hyperlocal telemetry for PIN ${q} via ${CITIES_DB[targetCityId].name} grid.`);
+          return;
+        }
+
+        setSearchNotice(`No exact match for "${pinQuery}". Try 201308 (Greater Noida), 110092 (Delhi), 400051 (Mumbai), or 560001 (Bengaluru).`);
+      };
+
+      // Gemini Copilot Handler with Grounded Offline Fallback
+      const sendChatMessage = async (promptText) => {
+        const query = (promptText || chatInput).trim();
+        if (!query || isChatLoading) return;
+
+        setChatInput('');
+        const updatedHistory = [...chatHistory, { role: 'user', text: query }];
+        setChatHistory(updatedHistory);
+        setIsChatLoading(true);
+
+        const metroComparison = Object.values(CITIES_DB)
+          .map(c => `${c.name} (${c.stations[0].name}): AQI ${c.stations[0].aqi} (${getCpcbBand(c.stations[0].aqi).label}, PM2.5=${c.stations[0].pollutants.pm25} µg/m³)`)
+          .join('; ');
+
+        const systemInstruction = `You are VayuMitra, an Indian Urban Air Quality & Health Intelligence Copilot grounded in CPCB NAQI standards.
+Active Station: ${activeTelemetry.stationName} (PIN ${activeTelemetry.pin}), City: ${activeTelemetry.city.name} (${activeTelemetry.city.region}).
+Current CPCB AQI: ${activeTelemetry.aqi} (${activeBand.label}).
+Dominant Pollutant: ${dominantPollutant.name} at ${dominantPollutant.value} ${dominantPollutant.unit} (${dominantPollutant.multiple}x safe limit).
+All 6 Pollutants: PM2.5=${activeTelemetry.pollutants.pm25} µg/m³, PM10=${activeTelemetry.pollutants.pm10} µg/m³, NO2=${activeTelemetry.pollutants.no2} µg/m³, SO2=${activeTelemetry.pollutants.so2} µg/m³, CO=${activeTelemetry.pollutants.co} mg/m³, O3=${activeTelemetry.pollutants.o3} µg/m³.
+Passive Cigarette Equivalence: ~${cigarettesEq} cigarettes/day.
+GRAP Status: ${grapAlert ? grapAlert.stage + ' - ' + grapAlert.summary : 'Non-NCR city'}.
+User Health Persona: ${persona}.
+Other Metros: ${metroComparison}.
+Keep responses concise, structured with bullet points, and under 140 words.`;
+
+        let replyText = null;
+        const activeKey = userApiKey.trim();
+
+        if (activeKey) {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeKey}`;
+          const payload = {
+            contents: updatedHistory.map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] })),
+            systemInstruction: { parts: [{ text: systemInstruction }] }
+          };
+
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              const data = await res.json();
+              const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (candidateText) {
+                replyText = candidateText;
+                break;
+              }
+            } catch (err) {
+              await new Promise(r => setTimeout(r, 800));
+            }
+          }
+        }
+
+        // Grounded Smart Local Engine (works out-of-the-box on GitHub Pages without API key)
+        if (!replyText) {
+          await new Promise(r => setTimeout(r, 350));
+          const qLower = query.toLowerCase();
+          if (qLower.includes('run') || qLower.includes('jog') || qLower.includes('exercise')) {
+            replyText = activeTelemetry.aqi > 150
+              ? `**Hold off on outdoor running in ${activeTelemetry.city.name}.** At **AQI ${activeTelemetry.aqi} (${activeBand.label})**, deep aerobic breathing multiplies PM2.5 lung deposition (~${cigarettesEq} cigarettes/day equivalent). Shift your 5km session to an indoor treadmill.`
+              : `**Conditions are favorable for a 5km run in ${activeTelemetry.city.name}!** Current AQI is **${activeTelemetry.aqi} (${activeBand.label})** with PM2.5 at ${activeTelemetry.pollutants.pm25} µg/m³. Prefer green parks away from arterial traffic.`;
+          } else if (qLower.includes('hepa') || qLower.includes('purifier') || qLower.includes('indoor')) {
+            replyText = `**HEPA Purifier Protocol for AQI ${activeTelemetry.aqi}:**\n• Run your **True HEPA H13** unit on **High/Turbo** for 30 mins with doors/windows sealed, then maintain **Auto/Medium**.\n• Target CADR ≥ 350 m³/hr for bedrooms.\n• Keep windows closed during **6–10 AM** and **7–11 PM** inversion peaks.`;
+          } else if (qLower.includes('grap')) {
+            replyText = grapAlert
+              ? `**${grapAlert.stage}** is active for ${activeTelemetry.city.name} (AQI ${activeTelemetry.aqi}):\n• ${grapAlert.summary}\n• Wear certified N95 respirators outdoors and avoid open biomass burning.`
+              : `**${activeTelemetry.city.name}** is outside the Delhi-NCR CAQM GRAP jurisdiction, operating under standard CPCB National Ambient Air Quality Standards (current AQI: **${activeTelemetry.aqi}**).`;
+          } else if (qLower.includes('compare') || qLower.includes('bengaluru') || qLower.includes('mumbai')) {
+            const blr = CITIES_DB.bengaluru.stations[0];
+            replyText = `**${activeTelemetry.city.name} vs. Bengaluru Snapshot:**\n• **${activeTelemetry.city.name} (${activeTelemetry.stationName}):** AQI **${activeTelemetry.aqi}** (${activeBand.label}), PM2.5: ${activeTelemetry.pollutants.pm25} µg/m³.\n• **Bengaluru (${blr.name}):** AQI **${blr.aqi}** (${getCpcbBand(blr.aqi).label}), PM2.5: ${blr.pollutants.pm25} µg/m³.\nHigher boundary-layer mixing height (${CITIES_DB.bengaluru.mixingHeight}m vs ${activeTelemetry.mixingHeight}m) disperses particulates faster in Bengaluru.`;
+          } else {
+            replyText = `**${activeTelemetry.stationName}** reports **AQI ${activeTelemetry.aqi} (${activeBand.label})**, driven by **${dominantPollutant.name}** (${dominantPollutant.value} ${dominantPollutant.unit}, **${dominantPollutant.multiple}×** CPCB safe limit). ${activeBand.advisory}`;
+          }
+        }
+
+        setChatHistory(prev => [...prev, { role: 'model', text: replyText }]);
+        setIsChatLoading(false);
+      };
+
+      const personaAdvice = useMemo(() => {
+        const aqi = activeTelemetry.aqi;
+        const map = {
+          general: {
+            title: 'General Adult Commuter',
+            mask: aqi > 200 ? 'Certified N95 / FFP2 Mask Outdoors' : aqi > 100 ? 'N95 Recommended in Heavy Traffic' : 'No Mask Needed',
+            purifier: aqi > 200 ? 'HEPA H13 Continuous (Medium-High)' : aqi > 100 ? 'HEPA Auto Mode in Bedroom' : 'Natural Cross-Ventilation Safe',
+            exercise: aqi > 250 ? 'Indoor Gym / Home Workout Only' : aqi > 120 ? 'Best Window: 12:30 PM – 4:00 PM' : 'Unrestricted Outdoor Activity',
+            summary: aqi > 200
+              ? `High particulate load (${activeTelemetry.pollutants.pm25} µg/m³ PM2.5). Use car cabin air recirculation on expressways and wear a snug N95 mask during two-wheeler or open commutes.`
+              : `Manageable ambient conditions. Schedule prolonged outdoor errands during the afternoon solar dispersion window (12:30 PM – 4:00 PM).`
+          },
+          respiratory: {
+            title: 'Asthma / COPD / Allergic Rhinitis',
+            mask: aqi > 100 ? 'Mandatory Well-Fitted N95/N99' : 'Keep N95 Handy Near Traffic',
+            purifier: aqi > 100 ? 'HEPA H13 24×7 + Saline Nasal Rinse' : 'HEPA Night Mode Recommended',
+            exercise: aqi > 120 ? 'Strictly Indoors • Avoid Cold Morning Air' : 'Light Outdoor Walk (12 PM – 4 PM)',
+            summary: `Elevated airway reactivity risk from ${dominantPollutant.name} (${dominantPollutant.multiple}× safe limit). Keep rescue bronchodilator inhaler accessible and avoid early morning cold inversion air.`
+          },
+          vulnerable: {
+            title: 'Children (<12 yrs) & Seniors (>65 yrs)',
+            mask: aqi > 150 ? 'Kids/Senior-Sized N95/KF94 Outdoors' : 'Optional in Parks',
+            purifier: aqi > 150 ? 'HEPA Sealed Room • Zero Incense/Coils' : 'Ventilate 1 PM – 4 PM Only',
+            exercise: aqi > 180 ? 'Indoor Play & Corridor Walks Only' : 'Afternoon Park Visit (1 PM – 4 PM)',
+            summary: `Developing lungs and older cardiovascular systems absorb higher relative particulate doses. Eliminate indoor smoke sources (agarbatti, dhoop, mosquito coils) and prioritize hydration.`
+          },
+          athlete: {
+            title: 'Outdoor Runner / Cyclist',
+            mask: aqi > 150 ? 'Switch to Indoor Cardio (Unmasked)' : 'No Mask Needed for Tempo Runs',
+            purifier: aqi > 150 ? 'HEPA Recovery Room Post-Workout' : 'Standard Ventilation',
+            exercise: aqi > 200 ? 'Cancel Outdoor Runs • Treadmill/Trainer' : aqi > 100 ? 'Zone-2 Easy Run Only (12:30–3:30 PM)' : 'Optimal for Intervals & Long Rides',
+            summary: `Endurance cardio increases minute ventilation 10–15×, bypassing nasal filtration. At AQI ${aqi}, deep mouth-breathing drives fine particulates directly into distal airways.`
+          }
+        };
+        return map[persona];
+      }, [persona, activeTelemetry, dominantPollutant]);
+
+      const selectedPollutantSpec = POLLUTANT_SPECS[selectedPollutantKey];
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased flex flex-col">
+          {/* TOP COMMAND BAR */}
+          <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-600 via-emerald-600 to-cyan-700 flex items-center justify-center text-white shadow-md shadow-teal-600/20">
+                      <Icons.Activity className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
+                          VayuPulse <span className="text-teal-600">India</span>
+                        </h1>
+                        <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          <Icons.Clock className="w-3 h-3 text-teal-600" />
+                          {nowString || '01:14 PM IST'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">CPCB NAQI Hyperlocal Intelligence &amp; Health Copilot</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = mode === 'live' ? 'simulated' : 'live';
+                      setMode(next);
+                      if (next === 'simulated') setSimAqi(activeTelemetry.aqi);
+                    }}
+                    className="xl:hidden px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-800 flex items-center gap-1.5"
+                  >
+                    <span className={`w-2 h-2 rounded-full ${mode === 'live' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                    {mode === 'live' ? 'CPCB Live' : 'Simulator'}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                  <div className="relative min-w-[155px] flex-1 sm:flex-initial">
+                    <Icons.MapPin className="w-4 h-4 text-teal-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <select
+                      value={cityId}
+                      onChange={(e) => handleCitySelect(e.target.value)}
+                      aria-label="Select Indian City"
+                      className="w-full pl-9 pr-7 py-2 text-xs sm:text-sm font-bold bg-white border border-slate-300 rounded-xl text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                    >
+                      {Object.values(CITIES_DB).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="relative min-w-[200px] flex-1 sm:flex-initial">
+                    <Icons.Layers className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <select
+                      value={stationIndex}
+                      onChange={(e) => {
+                        setStationIndex(Number(e.target.value));
+                        setCustomStationOverride(null);
+                        setSearchNotice('');
+                      }}
+                      aria-label="Select CPCB Monitoring Station"
+                      className="w-full pl-9 pr-7 py-2 text-xs sm:text-sm font-medium bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                    >
+                      {activeTelemetry.city.stations.map((st, idx) => (
+                        <option key={st.id} value={idx}>
+                          {st.name} ({st.pin})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <form onSubmit={handlePinSearch} className="relative flex-1 sm:flex-initial min-w-[195px]">
+                    <Icons.Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={pinQuery}
+                      onChange={(e) => setPinQuery(e.target.value)}
+                      placeholder="6-digit PIN (e.g. 201308)"
+                      className="w-full pl-8 pr-14 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[11px] font-bold bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+                    >
+                      Go
+                    </button>
+                  </form>
+
+                  <div className="hidden xl:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setMode('live')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                        mode === 'live' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      CPCB Telemetry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('simulated');
+                        setSimAqi(activeTelemetry.aqi);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                        mode === 'simulated' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Icons.Sliders className="w-3.5 h-3.5" />
+                      Scenario Simulator
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {mode === 'simulated' && (
+                <div className="mt-3 pt-3 border-t border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                      <Icons.Zap className="w-3.5 h-3.5 text-amber-600" /> Stress Presets:
+                    </span>
+                    {SCENARIO_PRESETS.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setSimAqi(p.aqi)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                          simAqi === p.aqi
+                            ? 'bg-slate-900 text-white border-slate-900'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {p.label} ({p.aqi})
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3 flex-1 max-w-md">
+                    <span className="text-xs font-mono font-bold text-slate-500">20</span>
+                    <input
+                      type="range"
+                      min="20"
+                      max="495"
+                      value={simAqi}
+                      onChange={(e) => setSimAqi(Number(e.target.value))}
+                      className="w-full accent-teal-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      AQI {simAqi}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {searchNotice && (
+                <div className="mt-2.5 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-xs text-teal-900 flex items-center justify-between">
+                  <span>{searchNotice}</span>
+                  <button onClick={() => setSearchNotice('')} className="font-bold text-teal-700 hover:text-teal-950 ml-3">✕</button>
+                </div>
+              )}
+            </div>
+          </header>
+
+          {/* MAIN CONTENT SHELL */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            
+            {/* HERO INTELLIGENCE PANEL */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* COL 1: Precision CPCB NAQI Gauge */}
+              <section className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-1.5 transition-colors duration-300" style={{ backgroundColor: activeBand.color }} />
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-400">
+                        <span>{activeTelemetry.city.region}</span>
+                        <span>•</span>
+                        <span>PIN {activeTelemetry.pin}</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug mt-0.5">
+                        {activeTelemetry.stationName}
+                      </h2>
+                    </div>
+                    <span className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide border ${activeBand.badge}`}>
+                      {activeBand.label}
+                    </span>
+                  </div>
+
+                  <RadialAqiGauge aqi={activeTelemetry.aqi} band={activeBand} />
+                </div>
+
+                <div className="space-y-2.5 mt-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Prominent Pollutant</div>
+                      <div className="text-xs font-mono font-extrabold text-slate-900 mt-0.5">
+                        {dominantPollutant.name} • {dominantPollutant.value} {dominantPollutant.unit}
+                      </div>
+                      <div className="text-[10px] font-semibold text-rose-600 mt-0.5">
+                        {dominantPollutant.multiple}× CPCB Limit
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Passive Dose Equiv.</div>
+                      <div className="text-xs font-mono font-extrabold text-slate-900 mt-0.5 flex items-center gap-1">
+                        <Icons.Flame className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                        ~{cigarettesEq} cigs/day
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">Berkeley Earth Index</div>
+                    </div>
+                  </div>
+
+                  {grapAlert && (
+                    <div className={`p-2.5 rounded-xl border text-xs ${grapAlert.color}`}>
+                      <div className="font-extrabold flex items-center gap-1.5">
+                        <Icons.AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{grapAlert.stage}</span>
+                      </div>
+                      <p className="text-[11px] opacity-90 mt-0.5 leading-snug">{grapAlert.summary}</p>
+                    </div>
+                  )}
+
+                  <div className={`p-2.5 rounded-xl border text-[11px] leading-relaxed ${activeBand.bgSoft}`}>
+                    <strong>CPCB Advisory:</strong> {activeBand.advisory}
+                  </div>
+                </div>
+              </section>
+
+              {/* COL 2: 24-Hour Diurnal Boundary-Layer Forecast */}
+              <section className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900">24-Hr Diurnal &amp; Boundary Layer</h3>
+                      <p className="text-xs text-slate-500">Hover bars to inspect hourly inversion vs. dispersion</p>
+                    </div>
+                  </div>
+                  <DiurnalForecastChart hourlyData={hourlyForecast} currentHour={currentHour} />
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 pt-3 mt-3 border-t border-slate-100">
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
+                    <Icons.Thermometer className="w-3.5 h-3.5 text-amber-500 mx-auto mb-0.5" />
+                    <div className="text-xs font-mono font-bold text-slate-900">{activeTelemetry.city.temp}°C</div>
+                    <div className="text-[10px] text-slate-400">Temp</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
+                    <Icons.Droplets className="w-3.5 h-3.5 text-sky-500 mx-auto mb-0.5" />
+                    <div className="text-xs font-mono font-bold text-slate-900">{activeTelemetry.city.humidity}%</div>
+                    <div className="text-[10px] text-slate-400">Humidity</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
+                    <Icons.Wind className="w-3.5 h-3.5 text-teal-600 mx-auto mb-0.5" />
+                    <div className="text-xs font-mono font-bold text-slate-900">{activeTelemetry.city.windSpeed} km/h</div>
+                    <div className="text-[10px] text-slate-400">Wind {activeTelemetry.city.windDir}</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
+                    <Icons.Layers className="w-3.5 h-3.5 text-indigo-500 mx-auto mb-0.5" />
+                    <div className="text-xs font-mono font-bold text-slate-900">{activeTelemetry.mixingHeight}m</div>
+                    <div className="text-[10px] text-slate-400">Mixing Ht</div>
+                  </div>
+                </div>
+              </section>
+
+              {/* COL 3: Hyperlocal Source Apportionment */}
+              <section className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Source Apportionment</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Estimated emission drivers for {activeTelemetry.city.name}</p>
+
+                  <div className="w-full h-3.5 rounded-full overflow-hidden flex gap-0.5 my-4 bg-slate-100">
+                    {activeTelemetry.sources.map((src, idx) => (
+                      <button
+                        key={src.label}
+                        type="button"
+                        onClick={() => setSelectedSourceIdx(idx)}
+                        style={{ width: `${src.pct}%`, backgroundColor: src.color }}
+                        className={`h-full transition-opacity ${selectedSourceIdx === idx ? 'opacity-100 ring-2 ring-slate-900' : 'opacity-80 hover:opacity-100'}`}
+                        title={`${src.label}: ${src.pct}%`}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    {activeTelemetry.sources.map((src, idx) => (
+                      <button
+                        key={src.label}
+                        type="button"
+                        onClick={() => setSelectedSourceIdx(idx)}
+                        className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 ${
+                          selectedSourceIdx === idx
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : 'bg-slate-50/70 hover:bg-slate-100 text-slate-800 border-slate-200/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: src.color }} />
+                          <span className="text-xs font-semibold truncate">{src.label}</span>
+                        </div>
+                        <span className={`text-xs font-mono font-extrabold shrink-0 ${selectedSourceIdx === idx ? 'text-teal-300' : 'text-slate-700'}`}>
+                          {src.pct}%
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 leading-snug">
+                  <span className="font-bold text-slate-700">Primary Driver:</span>{' '}
+                  {activeTelemetry.sources[selectedSourceIdx]?.label} contributes{' '}
+                  <strong>{activeTelemetry.sources[selectedSourceIdx]?.pct}%</strong> of local particulate mass.
+                </div>
+              </section>
+            </div>
+
+            {/* 6-POLLUTANT TELEMETRY MATRIX */}
+            <section className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-slate-900">6-Pollutant Telemetry Matrix</h3>
+                  <p className="text-xs text-slate-500">Click any pollutant card to inspect local sources &amp; physiological impact</p>
+                </div>
+                <div className="text-xs font-mono text-slate-500 bg-slate-100 px-3 py-1 rounded-lg self-start sm:self-auto">
+                  CPCB NAAQS Safe Threshold Benchmarks
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {Object.values(POLLUTANT_SPECS).map((spec) => {
+                  const val = activeTelemetry.pollutants[spec.key];
+                  const multiple = (val / spec.limit).toFixed(1);
+                  const isAbove = val > spec.limit;
+                  const barPct = Math.min(100, Math.round((val / spec.maxScale) * 100));
+                  const isSelected = selectedPollutantKey === spec.key;
+
+                  const sparkPts = [0.85, 0.94, 1.08, 0.92, 0.78, 0.96, 1.0].map((m, i) => {
+                    const x = i * 14;
+                    const y = Math.max(4, Math.min(24, 24 - Math.round((val * m / spec.maxScale) * 20)));
+                    return `${x},${y}`;
+                  }).join(' ');
+
+                  return (
+                    <button
+                      key={spec.key}
+                      type="button"
+                      onClick={() => setSelectedPollutantKey(spec.key)}
+                      className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-teal-50/60 border-teal-500 ring-1 ring-teal-500 shadow-xs'
+                          : 'bg-slate-50/50 hover:bg-white border-slate-200/90'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-sm font-extrabold text-slate-900">{spec.name}</span>
+                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                            isAbove ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {multiple}×
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 truncate mt-0.5">{spec.fullName}</div>
+                      </div>
+
+                      <div className="my-2">
+                        <svg className="w-full h-6 overflow-visible" viewBox="0 0 84 26">
+                          <polyline
+                            fill="none"
+                            stroke={isAbove ? '#EF4444' : '#10B981'}
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            points={sparkPts}
+                          />
+                        </svg>
+                      </div>
+
+                      <div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-lg font-extrabold font-mono text-slate-900">{val}</span>
+                          <span className="text-[10px] text-slate-400">{spec.unit}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1.5">
+                          <div className={`h-full rounded-full ${isAbove ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${barPct}%` }} />
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 mt-1">Limit ≤ {spec.limit}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 p-3.5 rounded-xl bg-slate-900 text-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-400/30 text-xs font-mono font-bold">
+                      {selectedPollutantSpec.name} ({selectedPollutantSpec.fullName})
+                    </span>
+                    <span className="text-xs font-mono text-slate-300">
+                      Current: <strong>{activeTelemetry.pollutants[selectedPollutantSpec.key]} {selectedPollutantSpec.unit}</strong> (CPCB Limit: {selectedPollutantSpec.limit} {selectedPollutantSpec.unit})
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    <strong className="text-white">Local Sources:</strong> {selectedPollutantSpec.sources}
+                  </p>
+                  <p className="text-xs text-slate-300">
+                    <strong className="text-amber-300">Health Impact:</strong> {selectedPollutantSpec.healthImpact}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* BOTTOM SECTION: PROTECTION SUITE + VAYUMITRA AI COPILOT */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* LEFT 7 COLS: Protection & Exposure Suite */}
+              <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 mb-5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('planner')}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        activeTab === 'planner' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Icons.Shield className="w-3.5 h-3.5 text-teal-600" />
+                      Health &amp; Persona Planner
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('calculator')}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        activeTab === 'calculator' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Icons.Gauge className="w-3.5 h-3.5 text-indigo-600" />
+                      Commute Dose Calculator
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('leaderboard')}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        activeTab === 'leaderboard' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Icons.Award className="w-3.5 h-3.5 text-amber-600" />
+                      India Station Leaderboard
+                    </button>
+                  </div>
+
+                  {activeTab === 'planner' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { id: 'general', label: 'General Adult', sub: 'Daily commuter', emoji: '🧑🏽‍💼' },
+                          { id: 'respiratory', label: 'Asthma / COPD', sub: 'Sensitive airways', emoji: '🫁' },
+                          { id: 'vulnerable', label: 'Kids & Seniors', sub: '<12 or >65 yrs', emoji: '👵🏽' },
+                          { id: 'athlete', label: 'Runner / Cyclist', sub: 'High ventilation', emoji: '🏃🏽‍♂️' }
+                        ].map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setPersona(p.id)}
+                            className={`p-3 rounded-xl border text-left transition-all ${
+                              persona === p.id
+                                ? 'bg-teal-50/80 border-teal-500 ring-1 ring-teal-500'
+                                : 'bg-white border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="text-lg">{p.emoji}</div>
+                            <div className="text-xs font-extrabold text-slate-900 mt-1">{p.label}</div>
+                            <div className="text-[10px] text-slate-500">{p.sub}</div>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-extrabold text-slate-900">{personaAdvice.title} Protocol</h4>
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700">
+                            AQI {activeTelemetry.aqi}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 leading-relaxed">{personaAdvice.summary}</p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                          <div className="p-3 rounded-xl bg-white border border-slate-200/90">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Respirator Gear</div>
+                            <div className="text-xs font-bold text-slate-900 mt-1">{personaAdvice.mask}</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white border border-slate-200/90">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Indoor Air &amp; HEPA</div>
+                            <div className="text-xs font-bold text-slate-900 mt-1">{personaAdvice.purifier}</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white border border-slate-200/90">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Outdoor Window</div>
+                            <div className="text-xs font-bold text-slate-900 mt-1">{personaAdvice.exercise}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'calculator' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                          <div className="flex justify-between text-xs font-bold text-slate-800 mb-2">
+                            <span>Outdoor Duration</span>
+                            <span className="font-mono text-teal-700">{commuteMinutes} mins</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="15"
+                            max="240"
+                            step="15"
+                            value={commuteMinutes}
+                            onChange={(e) => setCommuteMinutes(Number(e.target.value))}
+                            className="w-full accent-teal-600 cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                            <span>15m</span><span>2h</span><span>4h</span>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                          <div className="text-xs font-bold text-slate-800 mb-2">Commute Mode</div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[
+                              { id: 'ac', label: 'AC Car', IconComp: Icons.Train },
+                              { id: 'open', label: 'Bike/Auto', IconComp: Icons.Bike },
+                              { id: 'active', label: 'Walk/Run', IconComp: Icons.Footprints }
+                            ].map(m => {
+                              const IC = m.IconComp;
+                              return (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => setTransportMode(m.id)}
+                                  className={`py-1.5 px-1 rounded-lg text-[11px] font-bold border flex flex-col items-center gap-1 ${
+                                    transportMode === m.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200'
+                                  }`}
+                                >
+                                  <IC className="w-3.5 h-3.5" />
+                                  <span>{m.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                          <div className="text-xs font-bold text-slate-800 mb-2">Mask Filtration</div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[
+                              { id: 'none', label: 'None' },
+                              { id: 'surgical', label: 'Cloth/Surg' },
+                              { id: 'n95', label: 'N95 / FFP2' }
+                            ].map(mk => (
+                              <button
+                                key={mk.id}
+                                type="button"
+                                onClick={() => setMaskType(mk.id)}
+                                className={`py-2 px-1 rounded-lg text-[11px] font-bold border ${
+                                  maskType === mk.id ? 'bg-teal-600 text-white border-teal-700' : 'bg-white text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                {mk.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            Estimated Commute Inhaled PM2.5 Dose
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-3xl font-extrabold font-mono text-amber-400">{doseMetrics.inhaledUg} µg</span>
+                            <span className="text-xs text-slate-300">({doseMetrics.budgetPct}% of WHO 24-hr safe lung budget)</span>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-1.5">
+                            {maskType === 'n95'
+                              ? 'Your N95 respirator is blocking ~88% of fine particulate lung deposition.'
+                              : `Switching to a sealed N95 mask cuts this commute dose by ${doseMetrics.savedWithN95} µg (down to ${doseMetrics.n95InhaledUg} µg).`}
+                          </p>
+                        </div>
+                        <div className="shrink-0 bg-white/10 border border-white/15 rounded-xl p-3 text-center">
+                          <div className="text-[10px] uppercase tracking-wider text-teal-300 font-bold">With N95</div>
+                          <div className="text-xl font-mono font-extrabold mt-0.5">{doseMetrics.n95InhaledUg} µg</div>
+                          <div className="text-[10px] text-slate-300">-88% Dose</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'leaderboard' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-slate-500">Click any station row to load its live telemetry</span>
+                        <button
+                          type="button"
+                          onClick={() => setSortAsc(!sortAsc)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 flex items-center gap-1"
+                        >
+                          <Icons.ArrowUpDown className="w-3.5 h-3.5" />
+                          {sortAsc ? 'Cleanest First' : 'Highest Alert First'}
+                        </button>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+                        {allStationsList.map((item, idx) => (
+                          <button
+                            key={`${item.cityId}-${item.pin}`}
+                            type="button"
+                            onClick={() => {
+                              const cityObj = CITIES_DB[item.cityId];
+                              const stIdx = cityObj.stations.findIndex(s => s.pin === item.pin);
+                              setCityId(item.cityId);
+                              setStationIndex(stIdx >= 0 ? stIdx : 0);
+                              setCustomStationOverride(null);
+                              setMode('live');
+                            }}
+                            className="w-full px-3.5 py-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 text-left"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-900 truncate">{item.cityName}</span>
+                                <span className="text-[11px] text-slate-500 truncate">• {item.stationName}</span>
+                                {idx === 0 && sortAsc && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-800 rounded">
+                                    Cleanest Escape
+                                  </span>
+                                )}
+                                {idx === 0 && !sortAsc && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-rose-100 text-rose-800 rounded">
+                                    Highest Alert
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] font-mono text-slate-400">PIN {item.pin} • PM2.5: {item.pm25} µg/m³</div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.band.badge}`}>
+                                {item.aqi} • {item.band.label}
+                              </span>
+                              <Icons.ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Telemetry aligned with CPCB CAAQMS &amp; SAFAR-India protocols</span>
+                  <span className="font-mono">Greater Noida • Delhi-NCR • All-India</span>
+                </div>
+              </section>
+
+              {/* RIGHT 5 COLS: VAYUMITRA AI COPILOT */}
+              <section className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col h-[520px] lg:h-auto overflow-hidden">
+                <div className="px-4 py-3 bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+                      <Icons.Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="text-sm font-extrabold">VayuMitra AI Copilot</h3>
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 rounded border border-teal-400/30">
+                          CPCB Grounded
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 truncate max-w-[215px]">
+                        Context: {activeTelemetry.city.name} • AQI {activeTelemetry.aqi}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowKeyInput(!showKeyInput)}
+                      title="Optional: Add Gemini API Key"
+                      className={`p-1.5 rounded-lg transition-colors ${userApiKey ? 'text-emerald-300 bg-emerald-500/20' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}
+                    >
+                      <Icons.Key className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setChatHistory([{
+                          role: 'model',
+                          text: `Context refreshed for **${activeTelemetry.stationName}** (AQI **${activeTelemetry.aqi}**). How can I help protect your respiratory health today?`
+                        }])
+                      }
+                      title="Reset chat"
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <Icons.RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {showKeyInput && (
+                  <div className="px-3.5 py-2 bg-slate-800 text-white border-b border-slate-700 flex items-center gap-2 text-xs">
+                    <input
+                      type="password"
+                      value={userApiKey}
+                      onChange={(e) => setUserApiKey(e.target.value)}
+                      placeholder="Optional Gemini API Key (for live LLM mode)..."
+                      className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-teal-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKeyInput(false)}
+                      className="px-2.5 py-1 bg-teal-600 hover:bg-teal-500 rounded-lg font-bold text-[11px]"
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
+
+                <div ref={chatScrollRef} className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/70">
+                  {chatHistory.map((msg, i) => {
+                    const html = msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />');
+                    return (
+                      <div key={i} className={`flex items-start gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                        {msg.role !== 'user' && (
+                          <div className="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center text-[11px] font-extrabold shrink-0 mt-0.5">
+                            VM
+                          </div>
+                        )}
+                        <div
+                          className={`rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[86%] shadow-2xs ${
+                            msg.role === 'user'
+                              ? 'bg-teal-600 text-white rounded-tr-sm'
+                              : 'bg-white border border-slate-200/90 text-slate-700 rounded-tl-sm'
+                          }`}
+                          dangerouslySetInnerHTML={{ __html: html }}
+                        />
+                      </div>
+                    );
+                  })}
+
+                  {isChatLoading && (
+                    <div className="flex items-start gap-2">
+                      <div className="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center text-[11px] font-extrabold shrink-0">
+                        VM
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs text-slate-500 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-3 py-2 bg-white border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto">
+                  {[
+                    'Should I go for a 5km run right now?',
+                    'How to set my HEPA purifier for this AQI?',
+                    'Compare Greater Noida vs Bengaluru today',
+                    'Explain GRAP restrictions for this level'
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => sendChatMessage(chip)}
+                      className="shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-200 border border-slate-200 text-slate-700 transition-colors"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    sendChatMessage();
+                  }}
+                  className="p-3 bg-white border-t border-slate-200 flex items-center gap-2"
+                >
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Ask VayuMitra about AQI, masks, GRAP..."
+                    className="flex-1 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isChatLoading || !chatInput.trim()}
+                    className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-colors"
+                  >
+                    <span>Ask</span>
+                    <Icons.Send className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+              </section>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
