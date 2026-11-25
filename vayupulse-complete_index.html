@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VayuPulse India — Urban Air Quality Intelligence &amp; Health Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    :focus-visible {
+      outline: 2px solid #38bdf8;
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STATIONS = [
+      {
+        id: "gn-kp3",
+        city: "Greater Noida",
+        station: "Knowledge Park III (CPCB)",
+        pin: "201310",
+        isNcr: true,
+        aqi: 248,
+        temp: 24,
+        humidity: 54,
+        wind: 7,
+        mixingHeight: "420m",
+        pollutants: { pm25: 142, pm10: 236, no2: 58, so2: 19, co: 1.6, o3: 48 },
+        sources: { vehicles: 38, dust: 29, biomass: 21, secondary: 12 },
+        forecast: [
+          { hr: "00:00", aqi: 270 }, { hr: "04:00", aqi: 305 }, { hr: "08:00", aqi: 288 },
+          { hr: "12:00", aqi: 215 }, { hr: "15:00", aqi: 184 }, { hr: "19:00", aqi: 256 },
+          { hr: "22:00", aqi: 282 }
+        ]
+      },
+      {
+        id: "dl-anand",
+        city: "New Delhi",
+        station: "Anand Vihar (CPCB)",
+        pin: "110092",
+        isNcr: true,
+        aqi: 342,
+        temp: 23,
+        humidity: 58,
+        wind: 6,
+        mixingHeight: "340m",
+        pollutants: { pm25: 215, pm10: 328, no2: 84, so2: 24, co: 2.3, o3: 52 },
+        sources: { vehicles: 42, dust: 24, biomass: 22, secondary: 12 },
+        forecast: [
+          { hr: "00:00", aqi: 360 }, { hr: "04:00", aqi: 392 }, { hr: "08:00", aqi: 375 },
+          { hr: "12:00", aqi: 295 }, { hr: "15:00", aqi: 262 }, { hr: "19:00", aqi: 348 },
+          { hr: "22:00", aqi: 378 }
+        ]
+      },
+      {
+        id: "mum-bandra",
+        city: "Mumbai",
+        station: "Bandra Kurla Complex",
+        pin: "400051",
+        isNcr: false,
+        aqi: 118,
+        temp: 30,
+        humidity: 66,
+        wind: 14,
+        mixingHeight: "880m",
+        pollutants: { pm25: 54, pm10: 112, no2: 41, so2: 16, co: 1.1, o3: 62 },
+        sources: { vehicles: 44, dust: 31, biomass: 8, secondary: 17 },
+        forecast: [
+          { hr: "00:00", aqi: 112 }, { hr: "04:00", aqi: 124 }, { hr: "08:00", aqi: 136 },
+          { hr: "12:00", aqi: 104 }, { hr: "15:00", aqi: 96 }, { hr: "19:00", aqi: 122 },
+          { hr: "22:00", aqi: 118 }
+        ]
+      },
+      {
+        id: "blr-silk",
+        city: "Bengaluru",
+        station: "Silk Board",
+        pin: "560068",
+        isNcr: false,
+        aqi: 74,
+        temp: 25,
+        humidity: 62,
+        wind: 12,
+        mixingHeight: "1050m",
+        pollutants: { pm25: 31, pm10: 72, no2: 34, so2: 11, co: 0.9, o3: 44 },
+        sources: { vehicles: 51, dust: 25, biomass: 9, secondary: 15 },
+        forecast: [
+          { hr: "00:00", aqi: 68 }, { hr: "04:00", aqi: 72 }, { hr: "08:00", aqi: 84 },
+          { hr: "12:00", aqi: 66 }, { hr: "15:00", aqi: 59 }, { hr: "19:00", aqi: 78 },
+          { hr: "22:00", aqi: 74 }
+        ]
+      }
+    ];
+
+    const PERSONAS = {
+      adult: {
+        label: "General Adult",
+        advice: "Keep windows closed during morning/evening inversions; use an N95 mask for outdoor commutes above AQI 200."
+      },
+      respiratory: {
+        label: "Asthma / Respiratory",
+        advice: "Keep rescue inhalers accessible, run HEPA purifiers indoors continuously, and avoid outdoor exertion above AQI 150."
+      },
+      vulnerable: {
+        label: "Children & Seniors",
+        advice: "Shift outdoor play or walks to the 12:30 PM – 4:00 PM solar dispersion window when mixing height peaks."
+      },
+      athlete: {
+        label: "Runner / Cyclist",
+        advice: "High ventilation increases particle intake; prefer indoor training when PM2.5 exceeds 90 µg/m³."
+      }
+    };
+
+    function getCategory(aqi) {
+      if (aqi <= 50) return { label: "Good", color: "#34d399", note: "Minimal health risk." };
+      if (aqi <= 100) return { label: "Satisfactory", color: "#a3e635", note: "Minor breathing discomfort to sensitive individuals." };
+      if (aqi <= 200) return { label: "Moderate", color: "#facc15", note: "Breathing discomfort for people with asthma or heart conditions." };
+      if (aqi <= 300) return { label: "Poor", color: "#fb923c", note: "Discomfort on prolonged outdoor exposure." };
+      if (aqi <= 400) return { label: "Very Poor", color: "#f87171", note: "Respiratory illness likely on prolonged exposure." };
+      return { label: "Severe", color: "#ef4444", note: "Serious health effects even for healthy adults." };
+    }
+
+    function getGrapBanner(aqi, isNcr) {
+      if (!isNcr || aqi <= 200) return "No CAQM GRAP restrictions active for this station.";
+      if (aqi <= 300) return "CAQM GRAP Stage I Active: Dust suppression & ban on open waste burning.";
+      if (aqi <= 400) return "CAQM GRAP Stage II Active: Stricter diesel generator & commercial fuel controls.";
+      if (aqi <= 450) return "CAQM GRAP Stage III Active: Non-essential construction & BS-III petrol / BS-IV diesel restrictions.";
+      return "CAQM GRAP Stage IV Active: Emergency restrictions on heavy vehicles & non-essential commercial activity.";
+    }
+
+    function App() {
+      const [stationId, setStationId] = useState("gn-kp3");
+      const [pinInput, setPinInput] = useState("");
+      const [simAqi, setSimAqi] = useState(null);
+      const [persona, setPersona] = useState("adult");
+      const [commuteMins, setCommuteMins] = useState(45);
+      const [hasN95, setHasN95] = useState(true);
+      const [apiKey, setApiKey] = useState("");
+      const [modalOpen, setModalOpen] = useState(false);
+      const [promptText, setPromptText] = useState("");
+      const [messages, setMessages] = useState([
+        {
+          role: "assistant",
+          text: "Ask me about safe exercise hours, N95 mask protection, or GRAP rules for your selected station."
+        }
+      ]);
+
+      const activeStation = STATIONS.find((s) => s.id === stationId) || STATIONS[0];
+      const effectiveAqi = simAqi !== null ? simAqi : activeStation.aqi;
+      const category = getCategory(effectiveAqi);
+      const cigsPerDay = (effectiveAqi / 22).toFixed(1);
+      const inhaledUg = ((activeStation.pollutants.pm25 * 0.018 * commuteMins) * (hasN95 ? 0.05 : 1)).toFixed(1);
+
+      useEffect(() => {
+        const onKeyDown = (e) => {
+          if (e.key === "Escape" && modalOpen) {
+            setModalOpen(false);
+          }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+      }, [modalOpen]);
+
+      const handlePinLookup = (e) => {
+        e.preventDefault();
+        const match = STATIONS.find((s) => s.pin === pinInput.trim());
+        if (match) {
+          setStationId(match.id);
+          setSimAqi(null);
+        }
+      };
+
+      const handleAsk = async (e) => {
+        e.preventDefault();
+        const trimmed = promptText.trim();
+        if (!trimmed) return;
+
+        const nextMsgs = [...messages, { role: "user", text: trimmed }];
+        setMessages(nextMsgs);
+        setPromptText("");
+
+        if (!apiKey.trim()) {
+          setMessages([
+            ...nextMsgs,
+            {
+              role: "assistant",
+              text: `At ${activeStation.station} (AQI ${effectiveAqi}, ${category.label}), ${PERSONAS[persona].advice} Add a Gemini API key in Settings for custom live AI responses.`
+            }
+          ]);
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey.trim())}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: `You are VayuMitra, an Indian air quality assistant. Station: ${activeStation.station} (${activeStation.city}), AQI: ${effectiveAqi} (${category.label}), PM2.5: ${activeStation.pollutants.pm25} µg/m³, Persona: ${PERSONAS[persona].label}. Answer concisely in under 90 words: ${trimmed}`
+                      }
+                    ]
+                  }
+                ]
+              })
+            }
+          );
+          const data = await res.json();
+          const reply =
+            data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+            PERSONAS[persona].advice;
+          setMessages([...nextMsgs, { role: "assistant", text: reply }]);
+        } catch {
+          setMessages([
+            ...nextMsgs,
+            { role: "assistant", text: `Offline fallback: ${PERSONAS[persona].advice}` }
+          ]);
+        }
+      };
+
+      const gaugeRadius = 54;
+      const circumference = 2 * Math.PI * gaugeRadius;
+      const clampedRatio = Math.min(Math.max(effectiveAqi / 500, 0), 1);
+      const strokeDashoffset = circumference * (1 - clampedRatio);
+
+      return (
+        <div className="min-h-screen bg-[#090d16] text-slate-100">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-sky-400 focus:px-4 focus:py-2 focus:font-semibold focus:text-slate-950"
+          >
+            Skip to main content
+          </a>
+
+          <header className="border-b border-slate-800 bg-slate-900/90 px-4 py-4 sm:px-8">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                  VayuPulse India
+                </h1>
+                <p className="text-sm text-slate-300">
+                  CPCB NAQI Intelligence &amp; Diurnal Health Assistant
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <label htmlFor="station-select" className="sr-only">
+                  Select CPCB Monitoring Station
+                </label>
+                <select
+                  id="station-select"
+                  value={stationId}
+                  onChange={(e) => {
+                    setStationId(e.target.value);
+                    setSimAqi(null);
+                  }}
+                  className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white"
+                >
+                  {STATIONS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.city} — {s.station}
+                    </option>
+                  ))}
+                </select>
+
+                <form onSubmit={handlePinLookup} className="flex items-center gap-2" aria-label="PIN code lookup">
+                  <label htmlFor="pin-input" className="sr-only">
+                    6-digit Indian PIN code
+                  </label>
+                  <input
+                    id="pin-input"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength="6"
+                    placeholder="PIN (e.g. 201310)"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    className="w-32 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                  >
+                    Find
+                  </button>
+                </form>
+
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  aria-label="Configure Gemini API key"
+                  className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+                >
+                  API Key
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <main id="main-content" className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8">
+            <div
+              role="status"
+              aria-live="polite"
+              className="rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-200"
+            >
+              {getGrapBanner(effectiveAqi, activeStation.isNcr)}
+            </div>
+
+            <section aria-labelledby="aqi-summary-heading" className="grid gap-6 md:grid-cols-3">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
+                <h2 id="aqi-summary-heading" className="text-sm font-semibold uppercase tracking-wider text-slate-300">
+                  Live AQI — {activeStation.city}
+                </h2>
+                <svg
+                  width="140"
+                  height="140"
+                  viewBox="0 0 140 140"
+                  role="img"
+                  aria-label={`Air Quality Index is ${effectiveAqi}, classified as ${category.label}`}
+                  className="my-3"
+                >
+                  <circle
+                    cx="70"
+                    cy="70"
+                    r={gaugeRadius}
+                    fill="none"
+                    stroke="#1e293b"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="70"
+                    cy="70"
+                    r={gaugeRadius}
+                    fill="none"
+                    stroke={category.color}
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    transform="rotate(-90 70 70)"
+                  />
+                  <text
+                    x="70"
+                    y="66"
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize="26"
+                    fontWeight="bold"
+                  >
+                    {effectiveAqi}
+                  </text>
+                  <text
+                    x="70"
+                    y="86"
+                    textAnchor="middle"
+                    fill="#cbd5e1"
+                    fontSize="12"
+                  >
+                    {category.label}
+                  </text>
+                </svg>
+                <p className="text-sm text-slate-300">{category.note}</p>
+                <p className="mt-2 text-xs text-slate-300">
+                  Passive equivalence: <strong className="text-white">{cigsPerDay}</strong> cigarettes/day
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+                <h2 className="text-base font-semibold text-white">Scenario Simulator</h2>
+                <p className="mt-1 text-sm text-slate-300">
+                  Test severity bands from 0 to 500 AQI.
+                </p>
+                <label htmlFor="aqi-slider" className="mt-4 block text-sm font-medium text-slate-200">
+                  Simulated AQI: {effectiveAqi}
+                </label>
+                <input
+                  id="aqi-slider"
+                  type="range"
+                  min="0"
+                  max="500"
+                  value={effectiveAqi}
+                  onChange={(e) => setSimAqi(Number(e.target.value))}
+                  className="mt-2 w-full accent-sky-400"
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSimAqi(410)}
+                    className="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-slate-700"
+                  >
+                    Smog Spike (410)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSimAqi(68)}
+                    className="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-slate-700"
+                  >
+                    Clean Breeze (68)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSimAqi(null)}
+                    className="rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-200 hover:bg-slate-700"
+                  >
+                    Reset Live
+                  </button>
+                </div>
+                <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg bg-slate-800/80 p-3">
+                    <dt className="text-xs text-slate-300">Temp / Humidity</dt>
+                    <dd className="font-semibold text-white">{activeStation.temp}°C / {activeStation.humidity}%</dd>
+                  </div>
+                  <div className="rounded-lg bg-slate-800/80 p-3">
+                    <dt className="text-xs text-slate-300">Wind / Mixing</dt>
+                    <dd className="font-semibold text-white">{activeStation.wind} km/h / {activeStation.mixingHeight}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+                <h2 className="text-base font-semibold text-white">Commute PM2.5 Dose</h2>
+                <p className="mt-1 text-sm text-slate-300">
+                  Estimate inhaled PM2.5 (µg) for your travel window.
+                </p>
+                <label htmlFor="commute-mins" className="mt-4 block text-sm font-medium text-slate-200">
+                  Commute duration: {commuteMins} mins
+                </label>
+                <input
+                  id="commute-mins"
+                  type="range"
+                  min="10"
+                  max="120"
+                  step="5"
+                  value={commuteMins}
+                  onChange={(e) => setCommuteMins(Number(e.target.value))}
+                  className="mt-2 w-full accent-sky-400"
+                />
+                <label className="mt-4 flex items-center gap-2 text-sm text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={hasN95}
+                    onChange={(e) => setHasN95(e.target.checked)}
+                    className="h-4 w-4 rounded accent-sky-400"
+                  />
+                  Wearing a fitted N95 respirator (~95% filtration)
+                </label>
+                <div className="mt-4 rounded-xl bg-slate-800 p-3 text-sm">
+                  Estimated inhaled PM2.5: <strong className="text-sky-300">{inhaledUg} µg</strong>
+                </div>
+              </div>
+            </section>
+
+            <section aria-labelledby="pollutants-heading" className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+              <h2 id="pollutants-heading" className="text-base font-semibold text-white">
+                Criteria Pollutants (µg/m³ except CO in mg/m³)
+              </h2>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {Object.entries(activeStation.pollutants).map(([key, val]) => (
+                  <div key={key} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <div className="text-xs font-semibold uppercase text-slate-300">{key}</div>
+                    <div className="mt-1 text-lg font-bold text-white">{val}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section aria-labelledby="health-copilot-heading" className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+                <h2 id="health-copilot-heading" className="text-base font-semibold text-white">
+                  Persona Health Guidance
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Health sensitivity persona">
+                  {Object.entries(PERSONAS).map(([key, item]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setPersona(key)}
+                      aria-pressed={persona === key}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                        persona === key
+                          ? "bg-sky-400 text-slate-950"
+                          : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-slate-200">
+                  {PERSONAS[persona].advice}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+                <h2 className="text-base font-semibold text-white">VayuMitra AI Copilot</h2>
+                <div
+                  aria-live="polite"
+                  className="mt-3 max-h-44 space-y-2 overflow-y-auto rounded-xl bg-slate-950 p-3 text-sm"
+                >
+                  {messages.map((m, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-lg p-2.5 ${
+                        m.role === "user"
+                          ? "bg-sky-950/80 text-sky-100"
+                          : "bg-slate-900 text-slate-200"
+                      }`}
+                    >
+                      <span className="font-semibold">{m.role === "user" ? "You: " : "VayuMitra: "}</span>
+                      {m.text}
+                    </div>
+                  ))}
+                </div>
+                <form onSubmit={handleAsk} className="mt-3 flex gap-2">
+                  <label htmlFor="copilot-input" className="sr-only">
+                    Ask VayuMitra a question about air quality
+                  </label>
+                  <input
+                    id="copilot-input"
+                    type="text"
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
+                    placeholder="Ask about outdoor run, N95, or GRAP..."
+                    className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                  >
+                    Ask
+                  </button>
+                </form>
+              </div>
+            </section>
+          </main>
+
+          {modalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="api-modal-title"
+            >
+              <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6">
+                <h2 id="api-modal-title" className="text-lg font-bold text-white">
+                  Gemini API Key (Optional)
+                </h2>
+                <p className="mt-1 text-sm text-slate-300">
+                  Stored in memory for this session only.
+                </p>
+                <label htmlFor="gemini-key-input" className="mt-4 block text-sm font-medium text-slate-200">
+                  API Key
+                </label>
+                <input
+                  id="gemini-key-input"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Paste Gemini API key"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white"
+                />
+                <div className="mt-5 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+                  >
+                    Save &amp; Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
