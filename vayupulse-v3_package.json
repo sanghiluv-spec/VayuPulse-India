@@ -1,0 +1,19 @@
+{
+  "name": "vayupulse-india",
+  "version": "1.1.0",
+  "description": "Hyperlocal Urban Air Quality Intelligence & Health Assistant grounded in CPCB NAQI standards",
+  "type": "module",
+  "scripts": {
+    "lint": "node --check src/utils/cpcbCalculator.js && node --check tests/aqi.test.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "air-quality",
+    "cpcb",
+    "aqi",
+    "india",
+    "health-tech",
+    "gemini-ai"
+  ],
+  "license": "MIT"
+}
